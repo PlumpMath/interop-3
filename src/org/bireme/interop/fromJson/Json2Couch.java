@@ -96,18 +96,19 @@ public class Json2Couch implements FromJson {
                                   (HttpURLConnection)dbasesUrl.openConnection();                        
         hconn.setRequestMethod("GET");            
         hconn.connect();
-        final BufferedReader reader = new BufferedReader(
-                             new InputStreamReader(hconn.getInputStream()));
-        boolean exists = false;
+        boolean exists;
         
-        while (!exists) {
-            final String line = reader.readLine();
-            if (line == null) {
-                break;
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(hconn.getInputStream()))) {
+            exists = false;
+            while (!exists) {
+                final String line = reader.readLine();
+                if (line == null) {
+                    break;
+                }
+                exists = line.contains("\"" + couchDbName + "\"");
             }
-            exists = line.contains("\"" + couchDbName + "\"");
         }
-        reader.close();
                 
         if (exists) {
             if (!append) { // Reset database if required

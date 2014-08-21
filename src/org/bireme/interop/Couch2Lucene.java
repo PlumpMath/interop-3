@@ -39,7 +39,7 @@ public class Couch2Lucene extends Source2Destination {
     
     private static void usage() {
         System.err.println("usage: Couch2Lucene <couchhost> <couchdb> "
-                                + "<couchquery> <lucenedir> OPTIONS");
+                                          + "<couchquery> <lucenedir> OPTIONS");
         System.err.println();
         System.err.println("       <couchhost> - CouchDB server url.");
         System.err.println("       <couchdb> - CouchDB database.");
@@ -53,12 +53,12 @@ public class Couch2Lucene extends Source2Destination {
         System.err.println("           CouchDB server port.");
         System.err.println("       --couchuser=<user>");
         System.err.println("           CouchDB server user.");
-        System.err.println("       --couchpsw=<password>");  
+        System.err.println("       --couchpsw=<password>");
         System.err.println("           CouchDB server password.");
-        System.err.println("       --couchfrom=<num>");  
+        System.err.println("       --couchfrom=<num>");
         System.err.println("           Initial sequential response hit number.");
-        System.err.println("       --couchto=<num>");  
-        System.err.println("           Last sequential response hit number.");        
+        System.err.println("       --couchto=<num>");
+        System.err.println("           Last sequential response hit number.");   
         System.err.println("       --tell=<num>");
         System.err.println("           Outputs log message each <num> exported documents.");
         System.err.println("       --store");  
@@ -124,6 +124,5 @@ public class Couch2Lucene extends Source2Destination {
                                                 append);
         
         new Couch2Lucene(c2j, j2l).export(tell);
-    }
-    
+    }    
 }
