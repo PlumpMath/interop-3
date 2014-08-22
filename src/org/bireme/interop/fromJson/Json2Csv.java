@@ -42,9 +42,17 @@ import org.json.JSONObject;
  * date: 20140821
  */
 public class Json2Csv implements FromJson {
+    public static final String DEFAULT_ENCODING = "UTF-8";
+    public static final char DEFAULT_DELIMITER = ',';
+    
     private final CSVWriter csvwriter;
     private final Writer writer;
     private boolean hasFooter;
+    
+    public Json2Csv(final String csvFile,
+                    final boolean hasFooter) throws IOException {
+        this (csvFile, DEFAULT_ENCODING, DEFAULT_DELIMITER, hasFooter);
+    }
     
     public Json2Csv(final String csvFile,
                     final String csvEncoding,
@@ -71,9 +79,8 @@ public class Json2Csv implements FromJson {
         if (tell <= 0) {
             throw new IllegalArgumentException("tell <= 0");
         }
-        final Map<String,Integer> footer = hasFooter 
-                                        ? new TreeMap<String,Integer>() : null;
-        final List<String> line = new ArrayList<>();
+        final Map<String,Integer> footer = new TreeMap<>();
+        final ArrayList<String> line = new ArrayList<>();
         final String[] stra = new String[0];
         int tot = 0;
         
@@ -91,17 +98,9 @@ public class Json2Csv implements FromJson {
                     idx = footer.size();
                     footer.put(k1, idx);
                 }
-                line.add(idx, k1);
+                AddElement(line, idx, obj.get(k1).toString());
             }
-            final String[] values = line.toArray(stra);
-            final int alen = values.length;
-            
-            for (int idx = 0; idx < alen; idx++) {
-                if (values[idx] == null) {
-                    values[idx] = "";
-                }
-            }
-            csvwriter.writeNext(values);
+            csvwriter.writeNext(line.toArray(stra));
         }
         if (hasFooter) { // Header at the end of the file
             csvwriter.writeNext(footer.keySet().toArray(stra));
@@ -112,5 +111,24 @@ public class Json2Csv implements FromJson {
             Logger.getLogger(Json2Csv.class.getName()).log(Level.SEVERE, null
                                                                           , ex);
         }
-    }   
+    }
+    
+    private void AddElement(final ArrayList<String> buffer,
+                            final int index,
+                            final String value) {
+        assert buffer != null;
+        assert index >= 0;
+        assert value != null;
+        
+        final int size = buffer.size();
+        
+        if (index < size) {
+            buffer.add(index, value);
+        } else {
+            for (int idx = size; idx < index; idx++) {
+                buffer.add(null);
+            }
+            buffer.add(value);
+        }
+    }
 }
