@@ -110,6 +110,10 @@ public class Json2Isis implements FromJson {
         
         final Record rec = new Record();
         
+        if ((idTag != null) && (jobj.has(idTag))) {
+            rec.setMfn(jobj.getInt(idTag));
+        }
+        
         for (String key : jobj.keySet()) {
             final Integer tag = convTable.get(key);
             final int tag2;

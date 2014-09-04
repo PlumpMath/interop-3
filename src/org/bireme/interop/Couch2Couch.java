@@ -45,7 +45,7 @@ public class Couch2Couch extends Source2Destination {
         System.err.println("       <couchquery1> - Search to retrieve the documents"
                                + "to be exported from source CouchDB database.");
         System.err.println("       <couchhost2> - Destination CouchDB server url.");
-        System.err.println("       <couchdb1> - Destination CouchDB database.");
+        System.err.println("       <couchdb2> - Destination CouchDB database.");
         System.err.println();
         System.err.println("OPTIONS:");
         System.err.println();
