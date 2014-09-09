@@ -21,87 +21,88 @@
 
 package org.bireme.interop;
 
+import java.io.IOException;
 import org.bireme.interop.fromJson.Json2Lucene;
-import org.bireme.interop.toJson.Twitter2Json;
+import org.bireme.interop.toJson.File2Json;
 
 /**
  *
  * @author Heitor Barbieri
- * date: 20140904
+ * date: 20140909
  */
-public class Twitter2Lucene extends Source2Destination {
+public class File2Lucene extends Source2Destination {
 
-    public Twitter2Lucene(final Twitter2Json t2j,
-                          final Json2Lucene j2l) {
-        super(t2j, j2l);
+    public File2Lucene(final File2Json f2j, 
+                       final Json2Lucene j2l) {
+        super(f2j, j2l);
     }
-
+    
     private static void usage() {
-        System.err.println("usage: Twitter2Lucene <twitteruserid> <lucenedir> "
-                                                                   + "OPTIONS");
+        System.err.println("usage: File2Lucene <dirpath> <filenameregexp> "
+                                                       + "<lucenedir> OPTIONS");
         System.err.println();
-        System.err.println("       <twitteruserid> - Twitter user id.");
+        System.err.println("       <dirpath> - Source directory path.");
+        System.err.println("       <filenameregexp> - Regular expression describing the file names.");
         System.err.println("       <lucenedir> - Destination Lucene index directory.");
         System.err.println();
         System.err.println("OPTIONS:");
         System.err.println();
-        System.err.println("       --twitterfrom=<num>");
-        System.err.println("           Initial sequential post number (from end).");
-        System.err.println("       --twitterto=<num>");
-        System.err.println("           Last sequential post number (from end).");
-        System.err.println("       --store");
+        System.err.println("       --encoding=<str>");
+        System.err.println("           Source files encoding.");        
+        System.err.println("       --tell=<num>");
+        System.err.println("           Outputs log message each <num> exported documents.");
+        System.err.println("       --recursive");
+        System.err.println("           Search subdirectories for files.");
+        System.err.println("       --store");  
         System.err.println("           Stores the documents into the destination Lucene index.");
         System.err.println("       --append");
         System.err.println("           Appends the documents into the destination Lucene index.");
-
+               
         System.exit(1);
     }
-
-    public static void main(final String[] args) throws Exception {
+    
+    public static void main(final String[] args) throws IOException  {
         final int len = args.length;
-        if (len < 2) {
+        if (len < 3) {
             usage();
         }
-
-        final String twitterUserId = args[0];
-        final String luceneDir = args[1];
-
-        int twitterFrom = 1;
-        int twitterTo = Twitter2Json.MAX_RATE_LIMIT;
-
-        boolean useRetweets = false;
+        
+        final String dirPath = args[0];
+        final String fileNameRegExp = args[1];
+        final String luceneDir = args[2];
+                                
+        String encoding = File2Json.DEFAULT_ENCODING;        
+        boolean recursive = false;
         boolean store = false;
         boolean append = false;
-
+        
         int tell = Integer.MAX_VALUE;
-
-        for (int idx = 2; idx < len; idx++) {
-            if (args[idx].startsWith("--twitterfrom=")) {
-                twitterFrom = Integer.parseInt(args[idx].substring(14));
-            } else if (args[idx].startsWith("--twitterto=")) {
-                twitterTo = Integer.parseInt(args[idx].substring(12));
-            } else if (args[idx].equals("--store")) {
-                store = true;
+        
+        for (int idx = 3; idx < len; idx++) {
+            if (args[idx].startsWith("--encoding=")) {   
+                encoding = args[idx].substring(11);
             } else if (args[idx].startsWith("--tell=")) {
                 tell = Integer.parseInt(args[idx].substring(7));
-            } else if (args[idx].equals("--useretweets")) {
-                useRetweets = true;
+            } else if (args[idx].equals("--recursive")) {
+                recursive = true;
+            } else if (args[idx].equals("--store")) {
+                store = true;
             } else if (args[idx].equals("--append")) {
-                append = true;
+                append = true;    
             } else {
                 usage();
             }
         }
-
-        final Twitter2Json t2j = new Twitter2Json(twitterUserId,
-                                                  twitterFrom,
-                                                  twitterTo,
-                                                  useRetweets);
+        
+        final File2Json f2j = new File2Json(dirPath,
+                                            fileNameRegExp,
+                                            encoding,
+                                            recursive);
 
         final Json2Lucene j2l = new Json2Lucene(luceneDir,
                                                 store,
                                                 append);
-
-        new Twitter2Lucene(t2j, j2l).export(tell);
+        
+        new File2Lucene(f2j, j2l).export(tell);
     }
 }

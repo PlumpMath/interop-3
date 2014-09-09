@@ -22,10 +22,14 @@
 package org.bireme.interop.fromJson;
 
 import bruma.BrumaException;
+import bruma.master.Field;
 import bruma.master.Master;
 import bruma.master.MasterFactory;
 import bruma.master.Record;
+import bruma.master.Subfield;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -132,7 +136,22 @@ public class Json2Isis implements FromJson {
                 final int len = array.length();
 
                 for (int idx = 0; idx < len; idx++) {
-                    rec.addField(tag2, array.get(idx).toString());
+                    final Object obj2 = array.get(idx);
+                    
+                    if (obj2 instanceof JSONArray) {
+                        final List<Subfield> subflds = new ArrayList<>();
+                        final JSONArray array2 = (JSONArray)obj2;
+                        final int len2 = array2.length();
+                        
+                        for (int idx2 = 0; idx2 < len2; idx2++) {
+                            final Object obj3 = array2.get(idx2);
+                            subflds.add(new Subfield((char)('a' + idx2), 
+                                                     obj3.toString()));
+                        }
+                        rec.addField(new Field(tag2, subflds));
+                    } else {
+                        rec.addField(tag2, obj2.toString());
+                    }
                 }
             } else {
                 rec.addField(tag2, obj.toString());
