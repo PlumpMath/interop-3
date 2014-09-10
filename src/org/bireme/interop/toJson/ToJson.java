@@ -44,7 +44,7 @@ public abstract class ToJson implements Iterable<JSONObject>,
         next = null;
     }
     
-    protected abstract JSONObject getNext() throws Exception;
+    protected abstract JSONObject getNext();
     
     @Override
     public Iterator<JSONObject> iterator() {

@@ -29,6 +29,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 import org.json.JSONObject;
 
 /**
@@ -115,7 +116,7 @@ public class SQL2Json extends ToJson {
     }
         
     @Override
-    protected final JSONObject getNext() throws SQLException {
+    protected final JSONObject getNext() {
         assert rs != null;
             
         JSONObject obj;
@@ -137,8 +138,14 @@ public class SQL2Json extends ToJson {
                 conn.close();
             }                        
         } catch (SQLException ex) {
-            conn.close();
-            throw ex;
+            obj = null;        
+            Logger.getLogger(this.getClass().getName()).severe(ex.getMessage());
+            try {
+                conn.close();
+            } catch (SQLException ex2) {
+                Logger.getLogger(this.getClass().getName())
+                                                      .severe(ex2.getMessage());
+            }
         }        
         return obj;
     }    

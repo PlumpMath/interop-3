@@ -27,6 +27,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.util.logging.Logger;
 import org.json.JSONObject;
 
 /**
@@ -37,6 +38,7 @@ import org.json.JSONObject;
 public class Csv2Json extends ToJson {
     public static final char DEF_DELIMITER = ',';
     
+    private final String csvFileName;
     private final Reader reader;
     private final CSVReader csvreader;
     private final String[] header;
@@ -56,6 +58,7 @@ public class Csv2Json extends ToJson {
         if (encoding == null) {
             throw new NullPointerException("encoding");
         }
+        csvFileName = csvFile;
         reader = new BufferedReader(new InputStreamReader(
                                        new FileInputStream(csvFile), encoding));
         csvreader = new CSVReader(reader, delimiter);
@@ -82,25 +85,33 @@ public class Csv2Json extends ToJson {
     }
     
     @Override
-    protected final JSONObject getNext() throws Exception {
-        final String[] nextLine = csvreader.readNext();
-        final JSONObject jobj;
-       
-        if (nextLine == null) {
+    protected final JSONObject getNext() {        
+        JSONObject jobj;
+
+        try {
+            final String[] nextLine = csvreader.readNext();
+            if (nextLine == null) {
+                reader.close();
+                jobj = null;
+            } else {
+                final int size = nextLine.length;
+                jobj = new JSONObject();
+                if ((header != null) && (header.length != size)) {
+                    final String msg = "[" + csvFileName + "]: csv line length";
+                    Logger.getLogger(this.getClass().getName()).severe(msg);
+                    jobj = getNext();
+                } else {
+                    for (int idx = 0; idx < size; idx++) {
+                        final String key = (header == null) ? "c" + (idx + 1) 
+                                                            : header[idx];
+                        jobj.put(key, nextLine[idx]);
+                    }
+                }
+            }
+        } catch (IOException ioe) {
+            final String msg = "[" + csvFileName + "]: " + ioe.getMessage();
+            Logger.getLogger(this.getClass().getName()).severe(msg);
             jobj = null;
-            reader.close();
-        } else {
-            final int size = nextLine.length;
-            jobj = new JSONObject();
-            if ((header != null) && (header.length != size)) {
-                throw new IllegalArgumentException("csv line length");
-            }
-            
-            for (int idx = 0; idx < size; idx++) {
-                final String key = (header == null) ? "c" + (idx + 1) 
-                                                    : header[idx];
-                jobj.put(key, nextLine[idx]);
-            }
         }
         
         return jobj;

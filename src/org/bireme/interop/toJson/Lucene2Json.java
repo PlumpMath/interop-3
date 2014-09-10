@@ -22,6 +22,8 @@
 package org.bireme.interop.toJson;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.logging.Logger;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.document.Document;
@@ -102,16 +104,32 @@ public class Lucene2Json extends ToJson {
     }
     
     @Override
-    protected JSONObject getNext() throws Exception {
-        final JSONObject obj;
+    protected JSONObject getNext() {
+        JSONObject obj;
+        boolean last = false;
         
-        if (curIndex <= lastIndex) {
-            final Document hitDoc = isearcher.doc(hits[curIndex++].doc);
-            obj = convertToJSONObject(hitDoc);
-        } else {
+        try {
+            if (curIndex <= lastIndex) {
+                final Document hitDoc = isearcher.doc(hits[curIndex++].doc);
+                obj = convertToJSONObject(hitDoc);
+            } else {
+                last = true;
+                obj = null;
+                ireader.close();
+                directory.close();
+            }
+        } catch(IOException ioe) {
             obj = null;
-            ireader.close();
-            directory.close();
+            Logger.getLogger(this.getClass().getName()).severe(ioe.toString());
+            if (!last) {
+                try {
+                    ireader.close();
+                    directory.close();
+                } catch(IOException ioe2) {
+                    Logger.getLogger(this.getClass().getName())
+                                                       .severe(ioe2.toString());                        
+                }
+            }
         }
         
         return obj;

@@ -22,14 +22,13 @@
 package org.bireme.interop.fromJson;
 
 import com.mongodb.BulkWriteOperation;
-import com.mongodb.BulkWriteResult;
 import com.mongodb.DB;
 import com.mongodb.DBCollection;
 import com.mongodb.DBObject;
 import com.mongodb.MongoClient;
+import com.mongodb.WriteConcern;
 import com.mongodb.util.JSON;
 import java.net.UnknownHostException;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.json.JSONObject;
 
@@ -100,6 +99,18 @@ public class Json2Mongo implements FromJson {
             if (++tot % tell == 0) {
                 System.out.println("+++" + tot);
             }
+            try {
+                coll.insert(convertToDBObj(obj), WriteConcern.SAFE);
+            } catch(IllegalArgumentException iae) {
+                Logger.getLogger(this.getClass().getName())
+                                                     .severe(iae.getMessage());
+            }
+        }
+        
+        /*for (JSONObject obj : it) {           
+            if (++tot % tell == 0) {
+                System.out.println("+++" + tot);
+            }
             
             bulkNum++;
             builder.insert(convertToDBObj(obj));
@@ -129,7 +140,7 @@ public class Json2Mongo implements FromJson {
                 Logger.getLogger(Json2Mongo.class.getName())
                                                         .log(Level.SEVERE, msg);
             }
-        }
+        }*/
     }    
     
     private DBObject convertToDBObj(final JSONObject jobj) {

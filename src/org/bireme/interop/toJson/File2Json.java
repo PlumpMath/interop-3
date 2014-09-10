@@ -29,8 +29,10 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
@@ -38,7 +40,7 @@ import org.json.JSONObject;
  * @author Heitor Barbieri 
  * date 20140908
  */
-public class File2Json extends ToJson {
+    public class File2Json extends ToJson {
     public static final String DEFAULT_ENCODING = "UTF-8";
     
     private final Iterator<File> files;
@@ -62,10 +64,10 @@ public class File2Json extends ToJson {
         if (encoding == null) {
             throw new NullPointerException("encoding");
         }
+        encod = encoding;
         files = getFiles(filePath, fileNameRegExp, recursive)
                 .iterator();
-        next = getNext();        
-        encod = encoding;
+        next = getNext();                
     }
 
     private void getFiles(final File filePath,
@@ -85,8 +87,11 @@ public class File2Json extends ToJson {
                 }                                
             } else { // directory
                 if (recursive) {
-                    for (File file : filePath.listFiles()) {
-                        getFiles(file, fileNameMat, recursive, out);
+                     final File[] xfiles = filePath.listFiles();
+                     if (xfiles != null) {                         
+                        for (File file : filePath.listFiles()) {
+                            getFiles(file, fileNameMat, recursive, out);
+                        }
                     }
                 }
             }
@@ -113,6 +118,7 @@ public class File2Json extends ToJson {
     private JSONObject getJson(final File in) throws IOException {
         assert in != null;
         
+        final JSONObject jobj;
         final BufferedReader reader = new BufferedReader(new InputStreamReader(
                                              new FileInputStream(in), encod));
         final StringBuilder builder = new StringBuilder();
@@ -126,15 +132,27 @@ public class File2Json extends ToJson {
         }        
         reader.close();
         
-        return new JSONObject(builder.toString());
+        try {
+            jobj = new JSONObject(builder.toString());
+        } catch(JSONException jex) {
+            throw new IOException("[" + in.getCanonicalPath() + "]: " 
+                                                           + jex.getMessage());
+        }
+        return jobj;
     }
 
     @Override
-    protected final JSONObject getNext() throws IOException {
-        final JSONObject obj;
+    protected final JSONObject getNext() {
+        JSONObject obj;
 
         if (files.hasNext()) {
-            obj = getJson(files.next());
+            try {
+                obj = getJson(files.next());
+            } catch(IOException ioe) {
+                Logger.getLogger(this.getClass().getName())
+                                                      .severe(ioe.getMessage());
+                obj = getNext();
+            }
         } else {
             obj = null;
         }

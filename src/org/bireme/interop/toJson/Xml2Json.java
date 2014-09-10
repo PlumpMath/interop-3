@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.xml.parsers.DocumentBuilder;
@@ -144,9 +145,13 @@ public class Xml2Json extends ToJson {
                 }                                
             } else { // directory
                 if (recursive) {
-                    for (File file : filePath.listFiles()) {
-                        getFiles(file, fileNameRegExp, fileExtRegExp, recursive, 
-                                                                           out);
+                    final File[] files = filePath.listFiles();
+                    
+                    if (files != null) {
+                        for (File file : filePath.listFiles()) {
+                            getFiles(file, fileNameRegExp, fileExtRegExp, recursive, 
+                                                                               out);
+                        }
                     }
                 }
             }
@@ -177,17 +182,17 @@ public class Xml2Json extends ToJson {
                                 final String fileExtRegExp,
                                 final boolean recursive,
                                 final String containsRegExp) throws IOException {
-        final List<File> lst1 = getFiles(filePath, fileNameRegExp, 
+        final List<File> lst1 = new ArrayList<>();
+        final List<File> lst2 = getFiles(filePath, fileNameRegExp, 
                                          fileExtRegExp, recursive);
-        final List<File> lst2 = new ArrayList<>();
         final Matcher mat = Pattern.compile(containsRegExp).matcher("");
         
-        for (File file : lst1) {
+        for (File file : lst2) {
             if (contains(file, mat)) {
-                lst2.add(file);
+                lst1.add(file);
             }
         }
-        return lst2;
+        return lst1;
     }
 
     private boolean contains(final File in,
@@ -240,11 +245,17 @@ public class Xml2Json extends ToJson {
     }
 
     @Override
-    protected final JSONObject getNext() throws IOException {
-        final JSONObject obj;
+    protected final JSONObject getNext() {
+        JSONObject obj;
 
         if (files.hasNext()) {
-            obj = getJson(files.next());
+            try {
+                obj = getJson(files.next());
+            } catch (IOException ioe) {
+                Logger.getLogger(this.getClass().getName())
+                                                      .severe(ioe.getMessage());
+                obj = getNext();
+            }
         } else {
             obj = null;
         }

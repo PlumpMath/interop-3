@@ -22,6 +22,7 @@
 package org.bireme.interop.toJson;
 
 import java.util.Iterator;
+import java.util.logging.Logger;
 import org.json.JSONObject;
 import twitter4j.GeoLocation;
 import twitter4j.Paging;
@@ -91,7 +92,7 @@ public class Twitter2Json extends ToJson {
     }
     
     @Override
-    protected final JSONObject getNext() throws TwitterException {
+    protected final JSONObject getNext() {
         JSONObject obj = null;
         boolean found = false;
         
@@ -109,8 +110,14 @@ public class Twitter2Json extends ToJson {
                     final Status status = tweetIterator.next();
                     obj = getDocument(status);
                     if (useRetweets) {
-                        retweetIterator = twitter.getRetweets(status.getId())
+                        try {
+                            retweetIterator = twitter.getRetweets(status.getId())
                                                                     .iterator();
+                        } catch(TwitterException tex) {
+                            retweetIterator = null;
+                            Logger.getLogger(this.getClass().getName())
+                                                      .severe(tex.getMessage());
+                        }
                     }
                 } else {
                     obj = null;

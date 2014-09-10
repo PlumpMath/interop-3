@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 
@@ -106,8 +107,8 @@ public class Isis2Json extends ToJson {
     }
     
     @Override
-    protected final JSONObject getNext() throws BrumaException {        
-        final JSONObject obj;
+    protected final JSONObject getNext() {        
+        JSONObject obj;
         
         try {            
             final int last = Math.min(to,
@@ -126,9 +127,10 @@ public class Isis2Json extends ToJson {
                 mst.close();
             }                       
         } catch (BrumaException ex) {
-                mst.close();
-                throw ex;
-        }        
+            Logger.getLogger(this.getClass().getName()).severe(ex.getMessage());
+            obj = getNext();
+        } 
+        
         return obj;
     }  
     

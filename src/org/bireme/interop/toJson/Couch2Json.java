@@ -21,6 +21,7 @@
 
 package org.bireme.interop.toJson;
 
+import java.util.logging.Logger;
 import org.json.JSONObject;
 
 /**
@@ -85,8 +86,11 @@ public class Couch2Json extends ToJson {
     }
             
     @Override
-    protected JSONObject getNext() throws Exception {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    protected JSONObject getNext() {
+        Logger.getLogger(this.getClass().getName())
+                                        .severe("Operation not yet supported.");
+        
+        return null;
     }
     
 }

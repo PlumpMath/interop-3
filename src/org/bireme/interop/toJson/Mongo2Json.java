@@ -28,6 +28,7 @@ import com.mongodb.DBObject;
 import com.mongodb.MongoClient;
 import com.mongodb.util.JSON;
 import java.net.UnknownHostException;
+import java.util.logging.Logger;
 import org.json.JSONObject;
 
 /**
@@ -96,11 +97,17 @@ public class Mongo2Json extends ToJson {
     }
     
     @Override
-    protected JSONObject getNext() throws Exception {
-        final JSONObject jobj;
+    protected JSONObject getNext() {
+        JSONObject jobj;
         
         if (cursor.hasNext()) {
-            jobj = convertToJSONObject(cursor.next());
+            try {
+                jobj = convertToJSONObject(cursor.next());
+            } catch(IllegalArgumentException iae) {
+                Logger.getLogger(this.getClass().getName())
+                                                      .severe(iae.getMessage());
+                jobj = getNext();
+            }
         } else {
             jobj = null;
         }
