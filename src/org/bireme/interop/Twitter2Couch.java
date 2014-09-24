@@ -21,8 +21,11 @@
 
 package org.bireme.interop;
 
+import java.util.Date;
 import org.bireme.interop.fromJson.Json2Couch;
+import org.bireme.interop.toJson.TweetLoader;
 import org.bireme.interop.toJson.Twitter2Json;
+import twitter4j.Query;
 
 /**
  *
@@ -37,19 +40,20 @@ public class Twitter2Couch extends Source2Destination {
     }
     
     private static void usage() {
-        System.err.println("usage: Twitter2Couch <twitteruserid> "
+        System.err.println("usage: Twitter2Couch [--twitteruserid=<str>|--twitterquery=<str>]"
                              + "<couchhost> <couchdb> OPTIONS");
         System.err.println();
         System.err.println("       <twitteruserid> - Twitter user id.");
+        System.err.println("       <twitterquery> - Twitter query search.");
         System.err.println("       <couchhost> - Destination CouchDB server url.");
         System.err.println("       <couchdb> - Destination CouchDB database.");
         System.err.println();
         System.err.println("OPTIONS:");
         System.err.println();
-        System.err.println("       --twitterfrom=<num>");  
-        System.err.println("           Initial sequential post number (from end).");
-        System.err.println("       --twitterto=<num>");  
-        System.err.println("           Last sequential post number (from end).");
+        System.err.println("       --twittertotal=<num>");  
+        System.err.println("           Max number of retrieved tweets.");
+        System.err.println("       --twitterlowerdate=<yyyymmdd>");  
+        System.err.println("           Date of the older tweet retrieved.");
         System.err.println("       --couchport=<port>");
         System.err.println("           Destination CouchDB server port.");
         System.err.println("       --couchuser=<user>");
@@ -71,14 +75,17 @@ public class Twitter2Couch extends Source2Destination {
         if (len < 3) {
             usage();
         }
-        
-        final String twitterUserId = args[0];
+                
+        final String idQuery = args[0];
         final String couchHost = args[1];
         final String couchDbName = args[2];
         
-        int twitterFrom = 1;
-        int twitterTo = Twitter2Json.MAX_RATE_LIMIT;
-        
+        final String twitterUserId = idQuery.startsWith("--twitteruserid=") 
+                                                 ? idQuery.substring(16) : null;
+        final Query twitterQuery = idQuery.startsWith("--twitterquery=") 
+                                      ? new Query(idQuery.substring(15)) : null;
+        int twitterTotal = TweetLoader.MAX_PAGE_SIZE;        
+        Date twitterLowerDate = null;
         String couchPort = Integer.toString(Json2Couch.DEFAULT_COUCH_PORT);
         String couchUser = null;
         String couchPswd = null;
@@ -88,11 +95,17 @@ public class Twitter2Couch extends Source2Destination {
         
         int tell = Integer.MAX_VALUE;
         
+        if ((twitterUserId == null) && (twitterQuery == null)) {
+            usage();
+        }
+        if ((couchHost == null) && (couchDbName == null)) {
+            usage();
+        }
         for (int idx = 3; idx < len; idx++) {
-            if (args[idx].startsWith("--twitterfrom=")) {   
-                twitterFrom = Integer.parseInt(args[idx].substring(14));
-            } else if (args[idx].startsWith("--twitterto=")) {
-                twitterTo = Integer.parseInt(args[idx].substring(12));
+            if (args[idx].startsWith("--twittertotal=")) {   
+                twitterTotal = Integer.parseInt(args[idx].substring(15));
+            } else if (args[idx].startsWith("--twitterlowerdate=")) {   
+                twitterLowerDate = new Date(args[idx].substring(19));
             } else if (args[idx].startsWith("--couchport=")) {   
                 couchPort = args[idx].substring(12);
             } else if (args[idx].startsWith("--couchuser=")) {
@@ -111,8 +124,9 @@ public class Twitter2Couch extends Source2Destination {
         }
         
         final Twitter2Json t2j = new Twitter2Json(twitterUserId,
-                                                  twitterFrom,
-                                                  twitterTo,
+                                                  twitterQuery,
+                                                  twitterTotal,
+                                                  twitterLowerDate,
                                                   useRetweets);
 
         final Json2Couch j2c = new Json2Couch(couchHost,

@@ -44,7 +44,7 @@ import org.json.JSONTokener;
 public class Isis2Json extends ToJson {
     private final Master mst;
     private final List<Integer> tags;
-    private final Map<Integer,String> convTable;
+    private final Map<String,String> convTable;
     
     int current;
     
@@ -128,17 +128,21 @@ public class Isis2Json extends ToJson {
             }                       
         } catch (BrumaException ex) {
             Logger.getLogger(this.getClass().getName()).severe(ex.getMessage());
-            obj = getNext();
+            if (ex.getMessage().contains("getRecord")) {
+                obj = getNext();
+            } else {
+                obj = null;
+            }
         } 
         
         return obj;
     }  
     
-    private Map<Integer, String> getConvTable(final String in) 
+    private Map<String, String> getConvTable(final String in) 
                                                             throws IOException {
         assert in != null;
         
-        final Map<Integer, String> map = new HashMap<>();
+        final Map<String, String> map = new HashMap<>();
         
         try (BufferedReader reader = new BufferedReader(new FileReader(in))) {
             while (true) {
@@ -149,7 +153,7 @@ public class Isis2Json extends ToJson {
                 final String lineT = line.trim();
                 if (!lineT.isEmpty()) {
                     final String[] split = lineT.split(" *= *", 2);
-                    map.put(Integer.valueOf(split[0]), split[1]);
+                    map.put(split[0], split[1]);
                 }
             }
         }

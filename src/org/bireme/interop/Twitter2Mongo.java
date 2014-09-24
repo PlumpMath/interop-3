@@ -21,8 +21,11 @@
 
 package org.bireme.interop;
 
+import java.util.Date;
 import org.bireme.interop.fromJson.Json2Mongo;
+import org.bireme.interop.toJson.TweetLoader;
 import org.bireme.interop.toJson.Twitter2Json;
+import twitter4j.Query;
 
 /**
  *
@@ -37,20 +40,21 @@ public class Twitter2Mongo extends Source2Destination {
     }
 
     private static void usage() {
-        System.err.println("usage: Twitter2Mongo <twitteruserid> "
+        System.err.println("usage: Twitter2Mongo [--twitteruserid=<str>|--twitterquery=<str>]"
                              + "<mongohost> <mongodb> <mongocol> OPTIONS");
         System.err.println();
         System.err.println("       <twitteruserid> - Twitter user id.");
+        System.err.println("       <twitterquery> - Twitter query search.");
         System.err.println("       <mongohost> - MongoDB server url.");
         System.err.println("       <mongodb> - MongoDB database.");
         System.err.println("       <mongocol> - MongoDB colection name.");
         System.err.println();
         System.err.println("OPTIONS:");
         System.err.println();
-        System.err.println("       --twitterfrom=<num>");
-        System.err.println("           Initial sequential post number (from end).");
-        System.err.println("       --twitterto=<num>");
-        System.err.println("           Last sequential post number (from end).");
+        System.err.println("       --twittertotal=<num>");  
+        System.err.println("           Max number of retrieved tweets.");
+        System.err.println("       --twitterlowerdate=<yyyymmdd>");  
+        System.err.println("           Date of the older tweet retrieved.");
         System.err.println("       --mongoport=<port>");
         System.err.println("           MongoDb server port.");
         System.err.println("       --mongouser=<user>");
@@ -73,13 +77,17 @@ public class Twitter2Mongo extends Source2Destination {
             usage();
         }
 
-        final String twitterUserId = args[0];
+        final String idQuery = args[0];
         final String mongoHost = args[1];
         final String mongoDbName = args[2];
         final String mongoColName = args[3];
 
-        int twitterFrom = 1;
-        int twitterTo = Twitter2Json.MAX_RATE_LIMIT;
+        final String twitterUserId = idQuery.startsWith("--twitteruserid=") 
+                                                 ? idQuery.substring(16) : null;
+        final String twitterQuery = idQuery.startsWith("--twitterquery=") 
+                                                 ? idQuery.substring(15) : null;
+        int twitterTotal = TweetLoader.MAX_PAGE_SIZE;        
+        Date twitterLowerDate = null;
 
         String mongoPort = Integer.toString(Json2Mongo.DEFAULT_MONGO_PORT);
         String mongoUser = null;
@@ -90,11 +98,15 @@ public class Twitter2Mongo extends Source2Destination {
 
         int tell = Integer.MAX_VALUE;
 
+        if ((twitterUserId == null) && (twitterQuery == null)) {
+            usage();
+        }
+        
         for (int idx = 4; idx < len; idx++) {
-            if (args[idx].startsWith("--twitterfrom=")) {
-                twitterFrom = Integer.parseInt(args[idx].substring(14));
-            } else if (args[idx].startsWith("--twitterto=")) {
-                twitterTo = Integer.parseInt(args[idx].substring(12));
+            if (args[idx].startsWith("--twittertotal=")) {   
+                twitterTotal = Integer.parseInt(args[idx].substring(15));
+            } else if (args[idx].startsWith("--twitterlowerdate=")) {   
+                twitterLowerDate = new Date(args[idx].substring(19));
             } else if (args[idx].startsWith("--mongoport=")) {
                 mongoPort = args[idx].substring(12);
             } else if (args[idx].startsWith("--mongouser=")) {
@@ -113,8 +125,9 @@ public class Twitter2Mongo extends Source2Destination {
         }
 
         final Twitter2Json t2j = new Twitter2Json(twitterUserId,
-                                                  twitterFrom,
-                                                  twitterTo,
+                                                  new Query(twitterQuery),
+                                                  twitterTotal,
+                                                  twitterLowerDate,
                                                   useRetweets);
 
         final Json2Mongo j2m = new Json2Mongo(mongoHost,

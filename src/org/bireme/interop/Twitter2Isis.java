@@ -25,10 +25,13 @@ import bruma.master.Master;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import org.bireme.interop.fromJson.Json2Isis;
+import org.bireme.interop.toJson.TweetLoader;
 import org.bireme.interop.toJson.Twitter2Json;
+import twitter4j.Query;
 
 /**
  *
@@ -43,18 +46,19 @@ public class Twitter2Isis extends Source2Destination {
     }
     
     private static void usage() {
-        System.err.println("usage: Twitter2Isis <twitteruserid> <isismst> "
-                                                                   + "OPTIONS");
+        System.err.println("usage: Twitter2Isis [--twitteruserid=<str>|--twitterquery=<str>]"
+                                                    + " <isismst> OPTIONS");
         System.err.println();
         System.err.println("       <twitteruserid> - Twitter user id.");
+        System.err.println("       <twitterquery> - Twitter query search.");
         System.err.println("       <isismst> - Destination Isis master file name.");        
         System.err.println();
         System.err.println("OPTIONS:");
         System.err.println();
-        System.err.println("       --twitterfrom=<num>");  
-        System.err.println("           Initial sequential post number (from end).");
-        System.err.println("       --twitterto=<num>");  
-        System.err.println("           Last sequential post number (from end).");
+        System.err.println("       --twittertotal=<num>");  
+        System.err.println("           Max number of retrieved tweets.");
+        System.err.println("       --twitterlowerdate=<yyyymmdd>");  
+        System.err.println("           Date of the older tweet retrieved.");
         System.err.println("       --isisencoding=<encod>");
         System.err.println("           Encoding of the isis records.");
         System.err.println("       --convTable=<file>");
@@ -101,13 +105,16 @@ public class Twitter2Isis extends Source2Destination {
             usage();
         }
         
-        final String twitterUserId = args[0];
+        final String idQuery = args[0];
         final String mstName = args[1];
         final boolean ffi = true;
         
-        int twitterFrom = 1;
-        int twitterTo = Twitter2Json.MAX_RATE_LIMIT;
-        
+        final String twitterUserId = idQuery.startsWith("--twitteruserid=") 
+                                                 ? idQuery.substring(16) : null;
+        final String twitterQuery = idQuery.startsWith("--twitterquery=") 
+                                                 ? idQuery.substring(15) : null;
+        int twitterTotal = TweetLoader.MAX_PAGE_SIZE; 
+        Date twitterLowerDate = null;
         String encoding = Master.DEFAULT_ENCODING;
         Map<String,Integer> convTable = null;
                                 
@@ -116,11 +123,15 @@ public class Twitter2Isis extends Source2Destination {
         
         int tell = Integer.MAX_VALUE;
         
+        if ((twitterUserId == null) && (twitterQuery == null)) {
+            usage();
+        }
+        
         for (int idx = 2; idx < len; idx++) {
-            if (args[idx].startsWith("--twitterfrom=")) {   
-                twitterFrom = Integer.parseInt(args[idx].substring(14));
-            } else if (args[idx].startsWith("--twitterto=")) {
-                twitterTo = Integer.parseInt(args[idx].substring(12));
+            if (args[idx].startsWith("--twittertotal=")) {   
+                twitterTotal = Integer.parseInt(args[idx].substring(15));
+            } else if (args[idx].startsWith("--twitterlowerdate=")) {   
+                twitterLowerDate = new Date(args[idx].substring(19));
             } else if (args[idx].startsWith("--isisencoding=")) {
                 encoding = args[idx].substring(15);
             } else if (args[idx].startsWith("--convTable=")) {
@@ -137,8 +148,9 @@ public class Twitter2Isis extends Source2Destination {
         }
         
         final Twitter2Json t2j = new Twitter2Json(twitterUserId,
-                                                  twitterFrom,
-                                                  twitterTo,
+                                                  new Query(twitterQuery),
+                                                  twitterTotal,
+                                                  twitterLowerDate,
                                                   useRetweets);
 
         final Json2Isis j2i = new Json2Isis(mstName,

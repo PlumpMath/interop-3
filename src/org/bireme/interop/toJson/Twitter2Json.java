@@ -21,13 +21,13 @@
 
 package org.bireme.interop.toJson;
 
-import java.util.Iterator;
+import java.util.Date;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.json.JSONObject;
 import twitter4j.GeoLocation;
-import twitter4j.Paging;
 import twitter4j.Place;
-import twitter4j.ResponseList;
+import twitter4j.Query;
 import twitter4j.Status;
 import twitter4j.Twitter;
 import twitter4j.TwitterException;
@@ -41,37 +41,29 @@ import twitter4j.conf.ConfigurationBuilder;
  * date: 20140904
  */
 public class Twitter2Json extends ToJson {
-    // See https://dev.twitter.com/docs/rate-limiting/1.1
-    public static final int MAX_RATE_LIMIT = 150;     
+    private final TweetLoader loader;
 
-    private final boolean useRetweets;
-    private final Twitter twitter;
-    private final Iterator<Status> tweetIterator;
-    
-    private Iterator<Status> retweetIterator;
-    private int total;
-    
     public Twitter2Json(final String userId,
-                        final int from,
-                        final int to,
+                        final int total,
+                        final Date lowerDate,
                         final boolean useRetweets) throws TwitterException {
-        if (userId == null) {
-            throw new NullPointerException("userId");
-        }        
-        if (from < 1) {
-            throw new IllegalArgumentException("from[" + from + "] < 1");
-        }        
-        if (to < from) {
-            throw new IllegalArgumentException("to[" + to + "] <= from[" + from 
-                                                                         + "]");
-        }
-        if ((to-from) >= MAX_RATE_LIMIT) {
-            throw new IllegalArgumentException("to-from >= " + MAX_RATE_LIMIT);
-        }
-        this.from = from;
-        this.to = to;
-        this.useRetweets = useRetweets;
-        this.total = from;
+        this(userId, null, total, lowerDate, useRetweets);
+    }
+
+    public Twitter2Json(final Query query,
+                        final int total,
+                        final Date lowerDate,
+                        final boolean useRetweets) throws TwitterException {
+        this(null, query, total, lowerDate, useRetweets);
+    }
+
+    public Twitter2Json(final String userId,
+                         final Query query,
+                         final int total,
+                         final Date lowerDate,
+                         final boolean useRetweets) throws TwitterException {
+        assert ((userId != null) || (query != null));
+        assert ((total >= 1) || (lowerDate != null));
         
         final ConfigurationBuilder cb = new ConfigurationBuilder();
         cb.setDebugEnabled(true)
@@ -79,69 +71,41 @@ public class Twitter2Json extends ToJson {
           .setOAuthConsumerSecret("UP1VIf4K3jGDvOYYXh0zshHnuj8HSUMDTWlJEEhGMWIJHKGXSJ")
           .setOAuthAccessToken("2788081964-9C7j4ZBOsdIy9tmtMkong54QimvjkwopXdLqecm")
           .setOAuthAccessTokenSecret("swwqLPLWppweF3KRKe2zpU9qPNFDbsZm9OqQ5scX9vVCp");
-        
-        final Paging paging = new Paging(from, to);                
 
-        this.twitter = new TwitterFactory(cb.build()).getInstance();               
-        final ResponseList<Status> respLst = 
-                                        twitter.getUserTimeline(userId, paging);
+        final Twitter twitter = new TwitterFactory(cb.build()).getInstance();
         
-        this.tweetIterator = respLst.iterator();
-        this.retweetIterator = null;
-        this.next = getNext();
+        this.loader = new TweetLoader(twitter, userId, query, total, lowerDate, 
+                                                                   useRetweets);
+        next = getNext();
     }
-    
+
     @Override
     protected final JSONObject getNext() {
-        JSONObject obj = null;
-        boolean found = false;
-        
-        if (total++ <= to) {
-            if (retweetIterator != null) {
-                if (retweetIterator.hasNext()) {
-                    obj = getDocument(retweetIterator.next());
-                    found = true;
-                } else {
-                    retweetIterator = null;
-                }
-            }
-            if (!found) {
-                if (tweetIterator.hasNext()) {                    
-                    final Status status = tweetIterator.next();
-                    obj = getDocument(status);
-                    if (useRetweets) {
-                        try {
-                            retweetIterator = twitter.getRetweets(status.getId())
-                                                                    .iterator();
-                        } catch(TwitterException tex) {
-                            retweetIterator = null;
-                            Logger.getLogger(this.getClass().getName())
-                                                      .severe(tex.getMessage());
-                        }
-                    }
-                } else {
-                    obj = null;
-                }
-            }
+        Status status;
+        try {
+            status = loader.getNextStatus();
+        } catch (TwitterException ex) {
+            Logger.getLogger(Twitter2Json.class.getName()).log(Level.SEVERE, null, ex);
+            status = null;
         }
         
-        return obj;
+        return (status == null) ? null : getDocument(status);
     }
-    
+
     private JSONObject getDocument(final Status status) {
         assert status != null;
-        
+
         final JSONObject obj = new JSONObject();
         final GeoLocation geo = status.getGeoLocation();
         final Place place = status.getPlace();
         final User user = status.getUser();
-        
+
         obj.put("createdAt", status.getCreatedAt())
            .put("id", status.getId())
            .put("lang", status.getLang());
         if (geo != null) {
            obj.put("location_latitude", geo.getLatitude())
-              .put("location_longitude", geo.getLongitude());           
+              .put("location_longitude", geo.getLongitude());
         }
         if (place != null) {
            obj.put("place_country", place.getCountry())
@@ -163,8 +127,8 @@ public class Twitter2Json extends ToJson {
               .put("user_url", user.getURL());
         }
         obj.put("isTruncated", status.isTruncated())
-           .put("isRetweet", status.isRetweet());        
-        
+           .put("isRetweet", status.isRetweet());
+
         return obj;
-    }    
+    }
 }
